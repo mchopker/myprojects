@@ -1,0 +1,64 @@
+dn: dc=maxcrc,dc=com
+dc: maxcrc
+objectClass: domain
+objectClass: top
+
+dn: ou=groups, dc=maxcrc,dc=com
+ou: groups
+description: Container for group entries
+objectClass: top
+objectClass: organizationalUnit
+
+dn: cn=itpeople,ou=groups, dc=maxcrc,dc=com
+description: IT security group
+objectClass: groupOfNames
+member: cn=Sheri Smith,ou=people,dc=maxcrc,dc=com
+cn: itpeople
+
+dn: cn=salespeople,ou=groups, dc=maxcrc,dc=com
+description: Human Resources group
+objectClass: groupOfNames
+member: cn=John Smith,ou=people,dc=maxcrc,dc=com
+cn: salespeople
+
+dn: ou=People, dc=maxcrc,dc=com
+ou: People
+objectClass: top
+objectClass: organizationalUnit
+description: Container for user entries
+
+dn: cn=John Smith,ou=People, dc=maxcrc,dc=com
+sn: Smith
+userPassword:: alNtaXRI
+ou: Sales
+carLicense: HISCAR 124
+mail: j.smith@maxcrc.com
+mail: jsmith@maxcrc.com
+mail: john.smith@maxcrc.com
+objectClass: inetOrgPerson
+uid: jsmith
+homePhone: 555-111-2223
+cn: John Smith
+cn: John J Smith
+
+dn: cn=Mahesh Chopker,ou=People, dc=maxcrc,dc=com
+userPassword:: TWFoZXNoMTIz
+uid: mchopker
+ou: Sales
+objectClass: inetOrgPerson
+sn: Mahesh
+cn: Mahesh Chopker
+
+dn: cn=Sheri Smith,ou=People, dc=maxcrc,dc=com
+sn: smith
+userPassword:: c1NtaXRI
+ou: IT
+carLicense: HERCAR 125
+mail: s.smith@maxcrc.com
+mail: ssmith@maxcrc.com
+mail: sheri.smith@maxcrc.com
+objectClass: inetOrgPerson
+uid: ssmith
+homePhone: 555-111-2225
+cn: Sheri Smith
+
