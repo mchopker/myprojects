@@ -1,10 +1,7 @@
-package com.mahesh;
-
 import org.snmp4j.CommandResponder;
 import org.snmp4j.CommandResponderEvent;
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
-import org.snmp4j.PDUv1;
 import org.snmp4j.ScopedPDU;
 import org.snmp4j.Snmp;
 import org.snmp4j.TransportMapping;
@@ -18,18 +15,17 @@ import org.snmp4j.security.USM;
 import org.snmp4j.security.UsmUser;
 import org.snmp4j.smi.Address;
 import org.snmp4j.smi.GenericAddress;
-import org.snmp4j.smi.Integer32;
 import org.snmp4j.smi.IpAddress;
 import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
-import org.snmp4j.smi.TimeTicks;
 import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
+import org.snmp4j.util.DefaultPDUFactory;
 
 /**
  * @author mchopker
- *
+ * 
  */
 public class SNMPTrapGeneratorClient {
 
@@ -39,56 +35,42 @@ public class SNMPTrapGeneratorClient {
 	private static final int port = 162;
 
 	public static void main(String args[]) {
-		sendSnmpV1Trap();
-		sendSnmpV2Trap();
+		sendSnmpV1V2Trap(SnmpConstants.version1);
+		sendSnmpV1V2Trap(SnmpConstants.version2c);
 		sendSnmpV3Trap();
 	}
 
 	/**
-	 * This methods sends the V1 trap
+	 * This methods sends the V1/V2 trap
+	 * 
+	 * @param version
 	 */
-	private static void sendSnmpV1Trap() {
-		try {
-			// Create Transport Mapping
-			TransportMapping<?> transport = new DefaultUdpTransportMapping();
-			transport.listen();
-
-			// Create Target
-			CommunityTarget comtarget = new CommunityTarget();
-			comtarget.setCommunity(new OctetString(community));
-			comtarget.setVersion(SnmpConstants.version1);
-			comtarget.setAddress(new UdpAddress(ipAddress + "/" + port));
-			comtarget.setRetries(2);
-			comtarget.setTimeout(5000);
-
-			// Create PDU for V1
-			PDUv1 pdu = new PDUv1();
-			pdu.setType(PDU.V1TRAP);
-			pdu.setEnterprise(new OID(trapOid));
-			pdu.setGenericTrap(PDUv1.ENTERPRISE_SPECIFIC);
-			pdu.setSpecificTrap(1);
-			pdu.setAgentAddress(new IpAddress(ipAddress));
-			long sysUpTime = 111111;
-			pdu.setTimestamp(sysUpTime);
-
-			// Send the PDU
-			Snmp snmp = new Snmp(transport);
-			System.out.println("Sending V1 Trap to " + ipAddress + " on Port "
-					+ port);
-			snmp.send(pdu, comtarget);
-			snmp.close();
-		} catch (Exception e) {
-			System.err.println("Error in Sending V1 Trap to " + ipAddress
-					+ " on Port " + port);
-			System.err.println("Exception Message = " + e.getMessage());
-		}
+	private static void sendSnmpV1V2Trap(int version) {
+		// send trap
+		sendV1orV2Trap(version, community, ipAddress, port);
 	}
 
-	/**
-	 * This methods sends the V2 trap
-	 */
-	private static void sendSnmpV2Trap() {
+	private static PDU createPdu(int snmpVersion) {
+		PDU pdu = DefaultPDUFactory.createPDU(snmpVersion);
+		if (snmpVersion == SnmpConstants.version1) {
+			pdu.setType(PDU.V1TRAP);
+		} else {
+			pdu.setType(PDU.TRAP);
+		}
+		pdu.add(new VariableBinding(SnmpConstants.sysUpTime));
+		pdu.add(new VariableBinding(SnmpConstants.snmpTrapOID, new OID(trapOid)));
+		pdu.add(new VariableBinding(SnmpConstants.snmpTrapAddress,
+				new IpAddress(ipAddress)));
+		pdu.add(new VariableBinding(new OID(trapOid), new OctetString("Major")));
+		return pdu;
+	}
+
+	private static void sendV1orV2Trap(int snmpVersion, String community,
+			String ipAddress, int port) {
 		try {
+			// create v1/v2 PDU
+			PDU snmpPDU = createPdu(snmpVersion);
+
 			// Create Transport Mapping
 			TransportMapping<?> transport = new DefaultUdpTransportMapping();
 			transport.listen();
@@ -96,37 +78,20 @@ public class SNMPTrapGeneratorClient {
 			// Create Target
 			CommunityTarget comtarget = new CommunityTarget();
 			comtarget.setCommunity(new OctetString(community));
-			comtarget.setVersion(SnmpConstants.version2c);
+			comtarget.setVersion(snmpVersion);
 			comtarget.setAddress(new UdpAddress(ipAddress + "/" + port));
 			comtarget.setRetries(2);
 			comtarget.setTimeout(5000);
 
-			// Create PDU for V2
-			PDU pdu = new PDU();
-
-			// need to specify the system up time
-			long sysUpTime = 111111;
-			pdu.add(new VariableBinding(SnmpConstants.sysUpTime, new TimeTicks(
-					sysUpTime)));
-			pdu.add(new VariableBinding(SnmpConstants.snmpTrapOID, new OID(
-					trapOid)));
-			pdu.add(new VariableBinding(SnmpConstants.snmpTrapAddress,
-					new IpAddress(ipAddress)));
-
-			// variable binding for Enterprise Specific objects
-			pdu.add(new VariableBinding(new OID(trapOid), new OctetString(
-					"Major")));
-			pdu.setType(PDU.NOTIFICATION);
-
 			// Send the PDU
 			Snmp snmp = new Snmp(transport);
-			System.out.println("Sending V2 Trap to " + ipAddress + " on Port "
+			snmp.send(snmpPDU, comtarget);
+			System.out.println("Sent Trap to (IP:Port)=> " + ipAddress + ":"
 					+ port);
-			snmp.send(pdu, comtarget);
 			snmp.close();
 		} catch (Exception e) {
-			System.err.println("Error in Sending V2 Trap to " + ipAddress
-					+ " on Port " + port);
+			System.err.println("Error in Sending Trap to (IP:Port)=> "
+					+ ipAddress + ":" + port);
 			System.err.println("Exception Message = " + e.getMessage());
 		}
 	}
@@ -136,11 +101,8 @@ public class SNMPTrapGeneratorClient {
 	 */
 	private static void sendSnmpV3Trap() {
 		try {
-			long start = System.currentTimeMillis();
 			Address targetAddress = GenericAddress.parse("udp:" + ipAddress
 					+ "/" + port);
-
-			// Create Transport Mapping
 			TransportMapping<?> transport = new DefaultUdpTransportMapping();
 			Snmp snmp = new Snmp(transport);
 			USM usm = new USM(SecurityProtocols.getInstance(), new OctetString(
@@ -157,8 +119,6 @@ public class SNMPTrapGeneratorClient {
 			UserTarget target = new UserTarget();
 			target.setAddress(targetAddress);
 			target.setRetries(1);
-
-			// set timeout
 			target.setTimeout(11500);
 			target.setVersion(SnmpConstants.version3);
 			target.setSecurityLevel(SecurityLevel.NOAUTH_NOPRIV);
@@ -167,30 +127,25 @@ public class SNMPTrapGeneratorClient {
 			// Create PDU for V3
 			ScopedPDU pdu = new ScopedPDU();
 			pdu.setType(ScopedPDU.NOTIFICATION);
-
-			// need to specify the system up time
-			long sysUpTime = (System.currentTimeMillis() - start) / 10;
-			pdu.add(new VariableBinding(SnmpConstants.sysUpTime, new TimeTicks(
-					sysUpTime)));
+			pdu.add(new VariableBinding(SnmpConstants.sysUpTime));
 			pdu.add(new VariableBinding(SnmpConstants.snmpTrapOID,
 					SnmpConstants.linkDown));
-			pdu.add(new VariableBinding(new OID("1.3.6.1.2.1.2.2.1.1.1"),
-					new Integer32(1)));
+			pdu.add(new VariableBinding(new OID(trapOid), new OctetString(
+					"Major")));
 
 			// Send the PDU
-			System.out.println("Sending V3 Trap to " + ipAddress + " on Port "
-					+ port);
 			snmp.send(pdu, target);
+			System.out.println("Sending Trap to (IP:Port)=> " + ipAddress + ":"
+					+ port);
 			snmp.addCommandResponder(new CommandResponder() {
-				@Override
 				public void processPdu(CommandResponderEvent arg0) {
 					System.out.println(arg0);
 				}
 			});
 			snmp.close();
 		} catch (Exception e) {
-			System.err.println("Error in Sending V2 Trap to " + ipAddress
-					+ " on Port " + port);
+			System.err.println("Error in Sending Trap to (IP:Port)=> "
+					+ ipAddress + ":" + port);
 			System.err.println("Exception Message = " + e.getMessage());
 		}
 	}

@@ -1,5 +1,3 @@
-package com.mahesh;
-
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Iterator;
@@ -32,7 +30,7 @@ import org.snmp4j.util.ThreadPool;
 
 /**
  * @author mchopker
- *
+ * 
  */
 public class SNMPTrapReceiver implements CommandResponder {
 
