@@ -1,0 +1,73 @@
+<project xmlns:ivy="antlib:org.apache.ivy.ant" name="SpringMVCProject" default="main" basedir=".">
+	<description>
+		Spring MVC with Ant Ivy Build
+	</description>
+
+	<!-- Project Structure -->
+	<property name="jdk.version" value="1.7" />
+	<property name="projectName" value="SpringMVCProject" />
+	<property name="src.dir" location="src/main/java" />
+	<property name="resources.dir" location="src/main/resources" />
+	<property name="web.dir" value="src/main/webapp" />
+	<property name="web.classes.dir" location="${web.dir}/WEB-INF/classes" />
+	<property name="target.dir" location="target" />
+	<property name="target.temp.dir" location="target/temp" />
+	<property name="lib.dir" value="${web.dir}/WEB-INF/lib" />
+
+	<!-- ivy start -->
+	<target name="resolve" description="retrieve dependencies with ivy">
+		<echo message="Getting dependencies..." />
+		<ivy:retrieve />
+
+		<ivy:cachepath pathid="compile.path" conf="compile" />
+		<ivy:cachepath pathid="runtime.path" conf="runtime" />
+		<ivy:cachepath pathid="test.path" conf="test" />
+
+	</target>
+
+	<!-- Compile Java source from ${src.dir} and output it to ${web.classes.dir} -->
+	<target name="compile" depends="init, resolve" description="compile source code">
+		<mkdir dir="${web.classes.dir}" />
+		<javac destdir="${web.classes.dir}" source="${jdk.version}" target="${jdk.version}" debug="true" includeantruntime="false" classpathref="compile.path">
+			<src path="${src.dir}" />
+		</javac>
+	</target>
+
+	<!-- Copy resources from ${resources.dir} to ${web.classes.dir} -->
+	<target name="copy-resources" description="copy Java resources like xml and properties files">
+		<copy todir="${web.classes.dir}">
+			<fileset dir="${resources.dir}">
+				<include name="**/*.xml" />
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!-- Create the the WAR -->
+	<target name="package" depends="clean, compile, copy-resources" description="create a war file">
+		<!-- ivy get dependencies and put it in ${lib.dir} -->
+		<ivy:retrieve pattern="${lib.dir}/[artifact]-[revision].[ext]" conf="runtime" />
+
+		<war destfile="${target.dir}/springmvcproject.war" webxml="${web.dir}/WEB-INF/web.xml">
+			<webinf dir="${web.dir}/WEB-INF" />
+			<lib dir="${lib.dir}" />
+			<zipfileset dir="${resources.dir}" prefix="resources" />
+		</war>
+	</target>
+
+	<!-- Create folders -->
+	<target name="init">
+		<mkdir dir="${src.dir}" />
+		<mkdir dir="${target.dir}" />
+		<mkdir dir="${web.classes.dir}" />
+	</target>
+
+	<!-- Delete folders -->
+	<target name="clean" description="clean up">
+		<delete dir="${web.classes.dir}" />
+		<delete dir="${target.dir}" />
+	</target>
+
+	<target name="main" depends="package" />
+
+</project>
